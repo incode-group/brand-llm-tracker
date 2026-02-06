@@ -5,4 +5,7 @@ export enum AnalysisStep {
   HARVEST = 'harvest',
   JUDGE = 'judge',
   AGGREGATE = 'aggregate',
+
+  LLM_MENTIONS = 'llm_mentions',
+  LLM_RESPONSES = 'llm_responses',
 }

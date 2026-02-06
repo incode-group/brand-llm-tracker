@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { AnalysisModule } from './analysis/analysis.module';
+import { ResearcherModule } from './researcher/researcher.module';
+import { GenAiModule } from './gen-ai/gen-ai.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { AnalysisModule } from './analysis/analysis.module';
       inject: [ConfigService],
     }),
     AnalysisModule,
+    ResearcherModule,
+    GenAiModule,
   ],
 })
 export class AppModule {}

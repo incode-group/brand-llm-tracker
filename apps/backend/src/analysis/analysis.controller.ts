@@ -6,7 +6,13 @@ export class AnalysisController {
   constructor(private readonly analysisService: AnalysisService) {}
 
   @Post('start')
-  async start(@Body() body: { brandName: string; domain: string }) {
-    return this.analysisService.startAnalysis(body.brandName, body.domain);
+  async start(
+    @Body() body: { brandName: string; website: string; location: string },
+  ) {
+    return this.analysisService.startAnalysis(
+      body.brandName,
+      body.website,
+      body.location,
+    );
   }
 }

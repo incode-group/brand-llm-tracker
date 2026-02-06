@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<"IDLE" | "PROCESSING" | "COMPLETED" | "FAILED">("IDLE");
   const [message, setMessage] = useState("");
+  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [results, setResults] = useState<MockResults | null>(null);
 
@@ -60,7 +61,9 @@ export default function Dashboard() {
     if (!brandName || !domain) return;
     setStatus("PROCESSING");
     setProgress(0);
+    setProgress(0);
     setResults(null); 
+    setAnalysisSteps([]);
     setMessage("Initializing quantum analysis vectors...");
 
     // MOCK MODE: If backend fails or for demo, use this simulation
@@ -89,6 +92,13 @@ export default function Dashboard() {
       else if (mockProgress < 60) setMessage("Analyzing sentiment vectors...");
       else if (mockProgress < 90) setMessage("Calculating market resonance...");
       else setMessage("Finalizing report...");
+
+      // Add detailed steps based on progress
+      if (mockProgress === 10) setAnalysisSteps(prev => [...prev, "Initializing quantum analysis vectors..."]);
+      if (mockProgress === 25) setAnalysisSteps(prev => [...prev, "Fetching data from Responses API..."]);
+      if (mockProgress === 45) setAnalysisSteps(prev => [...prev, "Querying Mentions API for brand signals..."]);
+      if (mockProgress === 65) setAnalysisSteps(prev => [...prev, "Generating contextual prompts for LLM..."]);
+      if (mockProgress === 80) setAnalysisSteps(prev => [...prev, "Identifying key competitors and market overlapping..."]);
 
       if (mockProgress === 100) {
         clearInterval(interval);
@@ -283,6 +293,24 @@ export default function Dashboard() {
                          <div className="bg-white/5 rounded-lg p-4 text-center border border-white/5">
                            <div className="text-white/40 text-xs uppercase tracking-wider mb-1">ETA</div>
                            <div className="text-white font-medium">~45s</div>
+                         </div>
+                       </div>
+
+                       {/* Analysis Steps Log */}
+                       <div className="mt-8 space-y-2 text-left max-h-32 overflow-hidden relative">
+                         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#161616] to-transparent pointer-events-none z-10" />
+                         <div className="flex flex-col-reverse justify-end min-h-full">
+                           {analysisSteps.map((step, i) => (
+                             <motion.div
+                               key={i}
+                               initial={{ opacity: 0, x: -10 }}
+                               animate={{ opacity: 1, x: 0 }}
+                               className="flex items-center gap-2 text-xs text-white/50 font-mono py-1"
+                             >
+                               <div className="w-1.5 h-1.5 rounded-full bg-violet-glow/50 shrink-0" />
+                               {step}
+                             </motion.div>
+                           ))}
                          </div>
                        </div>
 

@@ -5,9 +5,15 @@ import { AnalysisService } from './analysis.service';
 import { AnalysisController } from './analysis.controller';
 import { AnalysisProcessor } from './analysis.processor';
 import { ProgressGateway } from './progress.gateway';
+import { ResearcherModule } from 'src/researcher/researcher.module';
+import { LlmMentionsModule } from 'src/llm-mentions/llm-mentions.module';
+import { LlmResponsesModule } from 'src/llm-responses/llm-responses.module';
 
 @Module({
   imports: [
+    ResearcherModule,
+    LlmMentionsModule,
+    LlmResponsesModule,
     BullModule.registerQueue({
       name: ANALYSIS_QUEUE,
     }),

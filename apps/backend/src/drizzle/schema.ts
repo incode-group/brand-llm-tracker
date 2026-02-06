@@ -1,6 +1,19 @@
-import { pgTable, text, timestamp, uuid, jsonb, decimal, pgEnum } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  jsonb,
+  decimal,
+  pgEnum,
+} from 'drizzle-orm/pg-core';
 
-export const analysisStatusEnum = pgEnum('analysis_status', ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']);
+export const analysisStatusEnum = pgEnum('analysis_status', [
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+]);
 
 export const analyses = pgTable('analyses', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -14,7 +27,9 @@ export const analyses = pgTable('analyses', {
 
 export const brandContext = pgTable('brand_context', {
   id: uuid('id').primaryKey().defaultRandom(),
-  analysisId: uuid('analysis_id').references(() => analyses.id).notNull(),
+  analysisId: uuid('analysis_id')
+    .references(() => analyses.id)
+    .notNull(),
   niche: text('niche'),
   targetAudience: text('target_audience'),
   competitors: jsonb('competitors'), // Array of top competitors
@@ -24,7 +39,9 @@ export const brandContext = pgTable('brand_context', {
 
 export const results = pgTable('results', {
   id: uuid('id').primaryKey().defaultRandom(),
-  analysisId: uuid('analysis_id').references(() => analyses.id).notNull(),
+  analysisId: uuid('analysis_id')
+    .references(() => analyses.id)
+    .notNull(),
   prompt: text('prompt').notNull(),
   model: text('model').notNull(),
   rawResponse: text('raw_response'),

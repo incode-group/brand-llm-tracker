@@ -11,8 +11,12 @@ export class AnalysisService {
     private readonly flowProducer: FlowProducer,
   ) {}
 
-  async startAnalysis(brandName: string, domain: string) {
+  async startAnalysis(brandName: string, website: string, location: string) {
     const analysisId = uuidv4();
+
+    const researchJobId = `research-${analysisId}`;
+    const mentionsResearchId = `research-mentions-${analysisId}`;
+    const responsesResearchId = `research-responses-${analysisId}`;
 
     // Strategy: Parent-Child Flow
     // Step A (Sequential): Research & Preparation
@@ -22,27 +26,37 @@ export class AnalysisService {
     await this.flowProducer.add({
       name: AnalysisStep.AGGREGATE,
       queueName: ANALYSIS_QUEUE,
-      data: { analysisId, brandName, domain },
+      data: { analysisId, brandName, website },
       children: [
         {
-          name: AnalysisStep.HARVEST,
+          name: AnalysisStep.LLM_MENTIONS,
+          queueName: ANALYSIS_QUEUE,
+          data: { analysisId, promptIndex: 1 },
+          // children: [
+          //   {
+          //     name: AnalysisStep.RESEARCH,
+          //     queueName: ANALYSIS_QUEUE,
+          //     data: { analysisId, brandName, website, location },
+          //     opts: {
+          //       jobId: mentionsResearchId,
+          //     },
+          //   },
+          // ],
+        },
+        {
+          name: AnalysisStep.LLM_RESPONSES,
           queueName: ANALYSIS_QUEUE,
           data: { analysisId, promptIndex: 1 },
           children: [
             {
               name: AnalysisStep.RESEARCH,
               queueName: ANALYSIS_QUEUE,
-              data: { analysisId, brandName, domain },
+              data: { analysisId, brandName, website, location },
+              opts: {
+                jobId: responsesResearchId,
+              },
             },
           ],
-        },
-        // In a real scenario, multiple harvest jobs would be added here
-        {
-          name: AnalysisStep.HARVEST,
-          queueName: ANALYSIS_QUEUE,
-          data: { analysisId, promptIndex: 2 },
-          // children: [same research job] - BullMQ handles shared dependencies via IDs, 
-          // but for simplicity in this PoC, we might structure it differently or use fixed IDs.
         },
       ],
     });
