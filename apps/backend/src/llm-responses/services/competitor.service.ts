@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BrandCompetitorsGenerationContext, BrandContext, Competitor } from '../types';
-import { PROMPTS } from '../utils/prompts';
+import { SYSTEM_PROMPTS } from '../constants/system-prompts';
 import { Brand } from 'src/researcher/types';
 import { GenAiService } from 'src/gen-ai/gen-ai.service';
 
@@ -12,7 +12,7 @@ export class CompetitorService {
 
   async generateCompetitors(context: BrandCompetitorsGenerationContext): Promise<Competitor[]> {
     this.logger.log(`Generating competitors for ${context.name}...`);
-    const prompt = PROMPTS.generateCompetitors(context);
+    const prompt = SYSTEM_PROMPTS.generateCompetitors(context);
 
     try {
       const response = await this.genAiService.generateText(prompt);

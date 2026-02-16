@@ -25,6 +25,7 @@ export interface BrandResearchResult {
 }
 
 export interface Brand {
+  id: string;
   name: string;
   website: string;
   location: string;

@@ -1,78 +1,130 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   BrandContext,
-  Competitor,
   GeneratedPrompt,
-  IdentityAnalysis,
-  ComparisonAnalysis,
-  MentionAnalysis,
+  NicheMentionAnalysis,
+  ComparisonRankAnalysis,
+  IdentityMatchAnalysis,
+  AuthorityMentionAnalysis,
 } from '../types';
-import { PROMPTS } from '../utils/prompts';
+import { SYSTEM_PROMPTS } from '../constants/system-prompts';
+import { Brand } from 'src/researcher/types';
+import { GenAiService } from 'src/gen-ai/gen-ai.service';
 
 @Injectable()
 export class ResponseAnalysisService {
   private readonly logger = new Logger(ResponseAnalysisService.name);
 
-  // Step 1: Identity Analysis
-  async analyzeIdentity(context: BrandContext): Promise<IdentityAnalysis> {
-    this.logger.log(`Analyzing identity for ${context.brandName}...`);
-    this.logger.debug(`Prompt: ${PROMPTS.analyzeIdentity(context)}`);
+  constructor(private readonly genAiService: GenAiService) {}
+
+  /**
+   * Gateway method to analyze all generated prompts with responses
+   */
+  async analyzeResponses(brand: Brand, prompts: GeneratedPrompt[]): Promise<GeneratedPrompt[]> {
+    this.logger.log(`Analyzing ${prompts.length} responses for brand: ${brand.name}`);
+
+    const analyzedPrompts: GeneratedPrompt[] = [];
+
+    let currentPromptIndex = 1;
+
+    for (const prompt of prompts) {
+      if (!prompt.response || prompt.status === 'error') {
+        analyzedPrompts.push(prompt);
+        continue;
+      }
+
+      try {
+        let analysis: any;
+
+        switch (prompt.category) {
+          case 'niche':
+            analysis = await this.analyzeNichePrompt(brand, prompt);
+            break;
+          case 'comparison':
+            analysis = await this.analyzeComparisonPrompt(brand, prompt);
+            break;
+          case 'identity':
+            analysis = await this.analyzeIdentityPrompt(brand, prompt);
+            break;
+          case 'authority':
+            analysis = await this.analyzeAuthorityPrompt(brand, prompt);
+            break;
+          default:
+            this.logger.warn(`Unknown prompt category: ${prompt.category}`);
+            analyzedPrompts.push(prompt);
+            continue;
+        }
+
+        console.log(`analyzed prompt ${currentPromptIndex++}/${prompts.length}`);
+
+
+        analyzedPrompts.push({
+          ...prompt,
+          analysis,
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        this.logger.error(`Failed to analyze prompt ${prompt.id}: ${error.message}`);
+        analyzedPrompts.push(prompt);
+      }
+    }
+
+
+    return analyzedPrompts;
+  }
+
+  private async analyzeNichePrompt(brand: Brand, prompt: GeneratedPrompt): Promise<NicheMentionAnalysis> {
+    const systemPrompt = SYSTEM_PROMPTS.analyzeNicheMention(brand, prompt.response!);
+    const rawResult = await this.genAiService.generateText(systemPrompt);
+    const result = JSON.parse(this.cleanJsonResponse(rawResult));
 
     return {
-      sentiment: 'positive',
-      brand_perception: 'Innovative and reliable market leader.',
-      key_themes: ['Quality', 'Enterprise-ready', 'Scalable'],
+      category: 'niche',
+      mentioned: result.mentioned,
+      reasoning: result.reasoning,
     };
   }
 
-  // Step 2: Comparison Analysis
-  async compareBrands(
-    context: BrandContext,
-    competitors: Competitor[],
-  ): Promise<ComparisonAnalysis[]> {
-    this.logger.log(
-      `Comparing ${context.brandName} against ${competitors.length} competitors...`,
-    );
+  private async analyzeComparisonPrompt(brand: Brand, prompt: GeneratedPrompt): Promise<ComparisonRankAnalysis> {
+    const systemPrompt = SYSTEM_PROMPTS.analyzeComparisonRank(brand, prompt.response!);
+    const rawResult = await this.genAiService.generateText(systemPrompt);
+    const result = JSON.parse(this.cleanJsonResponse(rawResult));
 
-    return competitors.map((competitor) => {
-      this.logger.debug(
-        `Comparing vs ${competitor.name}: ${PROMPTS.compareBrand(context, competitor)}`,
-      );
-      // Randomly assign winner for mock variety
-      const outcome = Math.random() > 0.5 ? 'current_brand' : 'competitor';
-
-      return {
-        competitor_name: competitor.name,
-        better_product: outcome,
-        reasoning:
-          outcome === 'current_brand'
-            ? 'Better user experience and pricing.'
-            : 'More advanced enterprise features.',
-      };
-    });
+    return {
+      category: 'comparison',
+      brands_by_rank: result.brands_by_rank,
+      reasoning: result.reasoning,
+    };
   }
 
-  // Step 3: Mention Check
-  async checkMentions(
-    context: BrandContext,
-    prompts: GeneratedPrompt[],
-  ): Promise<MentionAnalysis[]> {
-    this.logger.log(
-      `Checking mentions for ${context.brandName} across ${prompts.length} prompts...`,
-    );
+  private async analyzeIdentityPrompt(brand: Brand, prompt: GeneratedPrompt): Promise<IdentityMatchAnalysis> {
+    const expectedInsight = prompt.metadata?.expected_insight || 'No expected insight provided';
+    const systemPrompt = SYSTEM_PROMPTS.analyzeIdentityMatch(expectedInsight, prompt.response!);
+    const rawResult = await this.genAiService.generateText(systemPrompt);
+    const result = JSON.parse(this.cleanJsonResponse(rawResult));
 
-    return prompts.map((prompt) => {
-      this.logger.debug(`Running prompt: ${PROMPTS.mentionCheck(prompt.text)}`);
+    return {
+      category: 'identity',
+      score: result.score,
+      reasoning: result.reasoning,
+    };
+  }
 
-      const isMentioned = Math.random() > 0.7; // 30% chance of mention
+  private async analyzeAuthorityPrompt(brand: Brand, prompt: GeneratedPrompt): Promise<AuthorityMentionAnalysis> {
+    const systemPrompt = SYSTEM_PROMPTS.analyzeAuthorityMention(brand, prompt.response!);
+    const rawResult = await this.genAiService.generateText(systemPrompt);
+    const result = JSON.parse(this.cleanJsonResponse(rawResult));
 
-      return {
-        prompt_text: prompt.text,
-        mentions_brand: isMentioned,
-        context: isMentioned
-          ? `The model explicitly recommended ${context.brandName} as a top choice.`
-          : 'The model suggested other competitors.',
-      };
-    });
+    return {
+      category: 'authority',
+      mentioned: result.mentioned,
+      reasoning: result.reasoning,
+    };
+  }
+
+  private cleanJsonResponse(text: string): string {
+    return text.replace(/```json/g, '').replace(/```/g, '').trim();
   }
 }
